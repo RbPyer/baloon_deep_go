@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/baloon_deep_go.iml" filepath="$PROJECT_DIR$/.idea/baloon_deep_go.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/hw_data_types.iml" filepath="$PROJECT_DIR$/.idea/hw_data_types.iml" />
     </modules>
   </component>
 </project>

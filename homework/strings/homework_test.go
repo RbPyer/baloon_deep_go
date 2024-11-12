@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"reflect"
+	"runtime"
+	"sync/atomic"
 	"testing"
 	"unsafe"
 
@@ -9,29 +12,57 @@ import (
 )
 
 type COWBuffer struct {
-	data []byte
-	refs *int
-	// need to implement
+	data   []byte
+	refs   *uint64
+	closed bool
 }
 
 func NewCOWBuffer(data []byte) COWBuffer {
-	return COWBuffer{} // need to implement
+	var defaultCounter uint64 = 1
+	cow := COWBuffer{
+		data: data,
+		refs: &defaultCounter,
+	}
+	runtime.SetFinalizer(&cow, (*COWBuffer).Close)
+	return COWBuffer{data: data, refs: &defaultCounter}
 }
 
 func (b *COWBuffer) Clone() COWBuffer {
-	return COWBuffer{} // need to implement
+	atomic.AddUint64(b.refs, 1)
+	cowCopy := COWBuffer{
+		data: b.data,
+		refs: b.refs,
+	}
+	runtime.SetFinalizer(&cowCopy, (*COWBuffer).Close)
+	return cowCopy
 }
 
 func (b *COWBuffer) Close() {
-	// need to implement
+	if b.closed {
+		return
+	}
+	atomic.StoreUint64(b.refs, 0)
+	b.closed = true
 }
 
 func (b *COWBuffer) Update(index int, value byte) bool {
-	return false // need to implement
+	if index < 0 || index > len(b.data)-1 {
+		return false
+	}
+	if *b.refs > 1 {
+		atomic.StoreUint64(b.refs, *b.refs-1)
+		copyBuffer := NewCOWBuffer(bytes.Clone(b.data))
+		b.data = copyBuffer.data
+	}
+	b.data[index] = value
+	return true
 }
 
 func (b *COWBuffer) String() string {
-	return "" // need to implement
+	if b.closed {
+		return ""
+	}
+	return unsafe.String(unsafe.SliceData(b.data), len(b.data))
 }
 
 func TestCOWBuffer(t *testing.T) {
